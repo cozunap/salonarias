@@ -149,17 +149,17 @@ export default function RootLayout({
           src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
           strategy="afterInteractive"
         />
-        <Script id="gtranslate-init" strategy="afterInteractive">
-          {`
-            function googleTranslateElementInit() {
-              new google.translate.TranslateElement({
+        <Script id="gtranslate-init" strategy="afterInteractive" dangerouslySetInnerHTML={{
+          __html: `
+            window.googleTranslateElementInit = function() {
+              new window.google.translate.TranslateElement({
                 pageLanguage: 'fr', 
                 includedLanguages: 'en,es,fr',
                 autoDisplay: false
               }, 'google_translate_element');
             }
-          `}
-        </Script>
+          `
+        }} />
       </body>
 
     </html>
