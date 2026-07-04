@@ -18,6 +18,7 @@ interface SlideData {
     button_link: string;
     button2_label?: string;
     button2_link?: string;
+    active?: boolean;
 }
 
 export default function HeroSlider() {
@@ -29,11 +30,11 @@ export default function HeroSlider() {
             try {
                 const q = query(
                     collection(db, "homepage_sliders"),
-                    where("active", "==", true),
                     orderBy("sort_order", "asc")
                 );
                 const querySnapshot = await getDocs(q);
-                const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SlideData));
+                let data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SlideData));
+                data = data.filter(slide => slide.active === true);
 
                 if (data.length > 0) {
                     setSliderData(data);
