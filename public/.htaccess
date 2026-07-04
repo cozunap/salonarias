@@ -1,0 +1,33 @@
+# Configuration for HostGator / Apache Static Hosting
+# Optimized for Next.js Static Export (trailingSlash: false)
+
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Force remove trailing slash (Next.js with trailingSlash: false expectation)
+  # This avoids 403 on directories by prioritizing the .html file
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+  # 2. If it's a real file/dir, serve it as is
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 3. Clean URLs: If request doesn't have .html and file exists, serve it
+  RewriteCond %{REQUEST_FILENAME}.html -f
+  RewriteRule ^(.*)$ $1.html [L]
+
+  # 4. Handle subfolder index.html if it exists (e.g. /salon/)
+  RewriteCond %{REQUEST_URI} ^/(.*)/$
+  RewriteCond %{DOCUMENT_ROOT}/%1/index.html -f
+  RewriteRule ^(.*)/$ $1/index.html [L]
+
+  # 5. Fallback for client-side routing (SPA mode)
+  # Sends to root index.html if no matching file/route found
+  RewriteRule ^ index.html [L]
+</IfModule>

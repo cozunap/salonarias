@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Admin user UID
+    function isAdmin() {
+      return request.auth != null && request.auth.uid == 'Jscmlh1RoQOdltLpvgTjJQNUWma2';
+    }
+
+    // Publicly readable, admin writable
+    match /services/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /pages/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /settings/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /hero_slides/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /testimonials/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /gallery/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Publicly creatable, admin full access
+    match /bookings/{document=**} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Fallback for system tests or other collections
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

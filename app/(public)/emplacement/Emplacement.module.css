@@ -1,0 +1,46 @@
+@keyframes bounceMarker {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-12px);
+    }
+}
+
+.markerIcon {
+    width: 60px;
+    height: auto;
+    filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .5));
+    animation: bounceMarker 2.5s infinite ease-in-out;
+}
+
+.mapContainer {
+    position: relative;
+    width: 100%;
+    height: 600px;
+    overflow: hidden;
+    margin: 0 auto;
+    background: #1a1a1a;
+}
+
+.mapIframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.markerOverlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: none;
+}
