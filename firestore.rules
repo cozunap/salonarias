@@ -22,7 +22,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /hero_slides/{document=**} {
+    match /homepage_sliders/{document=**} {
       allow read: if true;
       allow write: if isAdmin();
     }
