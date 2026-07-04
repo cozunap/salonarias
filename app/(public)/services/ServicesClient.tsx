@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 
 interface BlockProps {
     image: string;
@@ -50,13 +51,10 @@ export default function ServicesClient() {
     useEffect(() => {
         async function fetchServices() {
             try {
-                const { data, error } = await supabase
-                    .from('services')
-                    .select('*')
-                    .eq('active', true)
-                    .order('sort_order', { ascending: true });
-                if (error) throw error;
-                setServicesList(data || []);
+                const q = query(collection(db, "services"), orderBy("sort_order", "asc"));
+                const querySnapshot = await getDocs(q);
+                const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setServicesList(data);
             } catch (err) {
                 console.error("Error fetching services:", err);
                 setServicesList([]);

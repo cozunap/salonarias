@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 export default function Footer() {
     const [settings, setSettings] = useState<Record<string, string>>({
@@ -16,14 +17,19 @@ export default function Footer() {
 
     useEffect(() => {
         async function fetchSettings() {
-            const { data } = await supabase.from('settings').select('key, value');
-            if (data) {
-                const map = { ...settings };
-                data.forEach(item => {
-                    // strip surrounding quotes from jsonb strings
-                    map[item.key] = typeof item.value === 'string' ? item.value.replace(/^"|"$/g, '') : item.value;
-                });
-                setSettings(map);
+            try {
+                const querySnapshot = await getDocs(collection(db, 'settings'));
+                if (!querySnapshot.empty) {
+                    const map = { ...settings };
+                    querySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const key = data.key || doc.id;
+                        map[key] = typeof data.value === 'string' ? data.value.replace(/^"|"$/g, '') : data.value;
+                    });
+                    setSettings(map);
+                }
+            } catch (err) {
+                console.error("Error fetching settings:", err);
             }
         }
         fetchSettings();

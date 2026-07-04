@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { db, storage } from "@/lib/firebase";
+import { collection, getDocs, doc, deleteDoc, addDoc, updateDoc, query, orderBy } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Plus, Edit2, Trash2, GripVertical, Image as ImageIcon, X, Check, Loader2 } from "lucide-react";
 import Image from "next/image";
 
@@ -39,13 +41,10 @@ export default function ServicesManager() {
     const fetchServices = async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('services')
-                .select('*')
-                .order('sort_order', { ascending: true });
-
-            if (error) throw error;
-            setServices(data || []);
+            const q = query(collection(db, "services"), orderBy("sort_order", "asc"));
+            const querySnapshot = await getDocs(q);
+            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
+            setServices(data);
         } catch (err: any) {
             console.error("Error fetching services:", err);
             setError("Failed to load services. Check your connection.");
@@ -85,21 +84,12 @@ export default function ServicesManager() {
         try {
             setIsSaving(true);
             let imageUrl = formData.image || null;
-            // If a new file is selected, upload it to Supabase Storage
+            // If a new file is selected, upload it to Firebase Storage
             if (selectedFile) {
-                const fileExt = selectedFile.name.split('.').pop();
                 const fileName = `${Date.now()}_${selectedFile.name}`;
-                const filePath = `${fileName}`; // You can adjust folder structure here
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('services')
-                    .upload(filePath, selectedFile, {
-                        cacheControl: '3600',
-                        upsert: false,
-                    });
-                if (uploadError) throw uploadError;
-                // Get public URL
-                const { data: publicData } = supabase.storage.from('services').getPublicUrl(filePath);
-                imageUrl = publicData?.publicUrl || null;
+                const storageRef = ref(storage, `services/${fileName}`);
+                await uploadBytes(storageRef, selectedFile, { cacheControl: 'public, max-age=3600' });
+                imageUrl = await getDownloadURL(storageRef);
             }
 
             const payload = {
@@ -109,19 +99,12 @@ export default function ServicesManager() {
                 sort_order: formData.sort_order,
             };
 
-            if (editingService) {
+            if (editingService && editingService.id !== "new") {
                 // Update existing service
-                const { error } = await supabase
-                    .from('services')
-                    .update(payload)
-                    .eq('id', editingService.id);
-                if (error) throw error;
+                await updateDoc(doc(db, "services", editingService.id), payload);
             } else {
                 // Insert new service
-                const { error } = await supabase
-                    .from('services')
-                    .insert([payload]);
-                if (error) throw error;
+                await addDoc(collection(db, "services"), payload);
             }
 
             setIsModalOpen(false);
@@ -140,8 +123,7 @@ export default function ServicesManager() {
         if (!window.confirm(`Are you sure you want to delete "${name}"? This cannot be undone.`)) return;
 
         try {
-            const { error } = await supabase.from('services').delete().eq('id', id);
-            if (error) throw error;
+            await deleteDoc(doc(db, "services", id));
 
             setServices(services.filter(s => s.id !== id));
             // Optional: Toast success

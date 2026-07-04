@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy, limit, where } from "firebase/firestore";
 
 interface GalleryImage {
-    id: number;
+    id: string;
     src: string;
     alt: string;
 }
@@ -14,17 +15,18 @@ export default function GalleryFeature() {
 
     useEffect(() => {
         async function fetchGallery() {
-            const { data, error } = await supabase
-                .from("gallery")
-                .select("*")
-                .eq("active", true)
-                .order("sort_order", { ascending: true })
-                .limit(4);
-
-            if (error) {
+            try {
+                const q = query(
+                    collection(db, "gallery"),
+                    where("active", "==", true),
+                    orderBy("sort_order", "asc"),
+                    limit(4)
+                );
+                const querySnapshot = await getDocs(q);
+                const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GalleryImage));
+                setImages(data as any);
+            } catch (error) {
                 console.error("Error fetching gallery:", error);
-            } else {
-                setImages(data || []);
             }
         }
         fetchGallery();
@@ -50,7 +52,7 @@ export default function GalleryFeature() {
                             />
                         ))
                     ) : (
-                        // Fallback static images if Supabase is empty or loading
+                        // Fallback static images if Firebase is empty or loading
                         <>
                             <img src="/assets/Defrisage-1.webp" alt="Defrisage 1" className="w-full h-[300px] object-cover border border-white/10" />
                             <img src="/assets/Defrisage-2.webp" alt="Defrisage 2" className="w-full h-[300px] object-cover border border-white/10" />

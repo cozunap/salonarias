@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { Check, Loader2, Save } from "lucide-react";
 
 interface SettingsMap {
@@ -20,19 +21,16 @@ export default function SettingsManager() {
 
     async function fetchSettings() {
         setLoading(true);
-        const { data, error } = await supabase
-            .from("settings")
-            .select("key, value");
-
-        if (error) {
-            console.error("Error fetching settings:", error);
-            console.error("Settings error details:", error.message, error.details, error.hint, error.code);
-        } else if (data) {
+        try {
+            const querySnapshot = await getDocs(collection(db, "settings"));
             const map: SettingsMap = {};
-            data.forEach((item) => {
-                map[item.key] = item.value;
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                map[data.key || doc.id] = data.value;
             });
             setSettings(map);
+        } catch (error) {
+            console.error("Error fetching settings:", error);
         }
         setLoading(false);
     }
@@ -54,11 +52,7 @@ export default function SettingsManager() {
                 // Wait, if we use text input, we will just send it as a JSON string.
                 const jsonValue = JSON.stringify(value.replace(/^"|"$/g, '')); // Strip existing quotes and restrip to be safe
 
-                const { error } = await supabase
-                    .from("settings")
-                    .upsert({ key, value: jsonValue }, { onConflict: 'key' });
-
-                if (error) throw error;
+                await setDoc(doc(db, "settings", key), { key, value: jsonValue }, { merge: true });
             });
 
             await Promise.all(updates);

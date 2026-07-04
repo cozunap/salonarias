@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, query, orderBy } from "firebase/firestore";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Check, X, Calendar as CalendarIcon, Clock, Phone, Mail, User, Loader2 } from "lucide-react";
@@ -28,16 +29,13 @@ export default function BookingsManager() {
 
     async function fetchBookings() {
         setLoading(true);
-        const { data, error } = await supabase
-            .from("bookings")
-            .select("*")
-            .order("date", { ascending: false })
-            .order("time", { ascending: false });
-
-        if (error) {
+        try {
+            const q = query(collection(db, "bookings"), orderBy("booking_date", "desc"), orderBy("booking_time", "desc"));
+            const querySnapshot = await getDocs(q);
+            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
+            setBookings(data);
+        } catch (error) {
             console.error("Error fetching bookings:", error);
-        } else {
-            setBookings(data || []);
         }
         setLoading(false);
     }
@@ -46,12 +44,9 @@ export default function BookingsManager() {
         // Optimistic update
         setBookings(bookings.map(b => b.id === id ? { ...b, status: newStatus } : b));
 
-        const { error } = await supabase
-            .from("bookings")
-            .update({ status: newStatus })
-            .eq("id", id);
-
-        if (error) {
+        try {
+            await updateDoc(doc(db, "bookings", id), { status: newStatus });
+        } catch (error) {
             console.error("Error updating booking:", error);
             // Revert on error (could refetch here too)
             alert("Erreur lors de la mise à jour du statut.");

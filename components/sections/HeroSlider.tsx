@@ -6,7 +6,8 @@ import { Autoplay, EffectFade, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/effect-fade";
 import "swiper/css/pagination";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 
 interface SlideData {
     id: string;
@@ -26,15 +27,15 @@ export default function HeroSlider() {
     useEffect(() => {
         async function fetchSlides() {
             try {
-                const { data, error } = await supabase
-                    .from('homepage_sliders')
-                    .select('*')
-                    .eq('active', true)
-                    .order('sort_order', { ascending: true });
+                const q = query(
+                    collection(db, "homepage_sliders"),
+                    where("active", "==", true),
+                    orderBy("sort_order", "asc")
+                );
+                const querySnapshot = await getDocs(q);
+                const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SlideData));
 
-                if (error) {
-                    console.error('Error fetching hero slides:', error);
-                } else if (data && data.length > 0) {
+                if (data.length > 0) {
                     setSliderData(data);
                 }
             } catch (err) {

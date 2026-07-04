@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     const [email, setEmail] = useState("");
@@ -14,16 +15,12 @@ export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         setLoading(true);
         setError("");
 
-        const { error: authError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
-
-        if (authError) {
-            console.error("Supabase login error:", authError);
-            setError(authError.message || "Credenciales incorrectas");
-        } else {
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
             onSuccess();
+        } catch (authError: any) {
+            console.error("Firebase login error:", authError);
+            setError(authError.message || "Credenciales incorrectas");
         }
         setLoading(false);
     };

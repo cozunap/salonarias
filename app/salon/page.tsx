@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { BarChart3, Link as LinkIcon, AlertCircle, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, getCountFromServer } from "firebase/firestore";
 
 export default function AdminOverview() {
     const defaultEmbedUrl = "https://lookerstudio.google.com/embed/reporting/0e61e063-b543-4532-9c52-54b83b45617d/page/rLBrF";
@@ -36,14 +37,12 @@ export default function AdminOverview() {
             setLoadingStats(true);
             
             // Fetch services count
-            const { count: servicesCount } = await supabase
-                .from('services')
-                .select('*', { count: 'exact', head: true });
+            const servicesSnapshot = await getCountFromServer(collection(db, "services"));
+            const servicesCount = servicesSnapshot.data().count;
 
             // Fetch pending/confirmed bookings count
-            const { count: bookingsCount } = await supabase
-                .from('bookings')
-                .select('*', { count: 'exact', head: true });
+            const bookingsSnapshot = await getCountFromServer(collection(db, "bookings"));
+            const bookingsCount = bookingsSnapshot.data().count;
 
             setStats({
                 services: servicesCount || 0,

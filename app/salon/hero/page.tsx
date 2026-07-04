@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, deleteDoc, addDoc, updateDoc, query, orderBy } from "firebase/firestore";
 import { Plus, Edit2, Trash2, GripVertical, Image as ImageIcon, X, Check, Loader2 } from "lucide-react";
 import Image from "next/image";
 
@@ -44,16 +45,12 @@ export default function HeroSliderManager() {
     async function fetchSlides() {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from("homepage_sliders")
-                .select("*")
-                .order("sort_order", { ascending: true });
-
-            if (error) {
-                console.error("Error fetching slides:", error);
-            } else {
-                setSlides(data || []);
-            }
+            const q = query(collection(db, "homepage_sliders"), orderBy("sort_order", "asc"));
+            const querySnapshot = await getDocs(q);
+            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HeroSlide));
+            setSlides(data);
+        } catch (error) {
+            console.error("Error fetching slides:", error);
         } finally {
             setLoading(false);
         }
@@ -103,26 +100,11 @@ export default function HeroSliderManager() {
                 sort_order: orderValue || 0
             };
 
-            // Attempt to save with all fields (including button2 if present)
-            let result;
             if (isAdding) {
-                result = await supabase.from("homepage_sliders").insert([finalData]);
+                await addDoc(collection(db, "homepage_sliders"), finalData);
             } else if (isEditing) {
-                result = await supabase.from("homepage_sliders").update(finalData).eq("id", isEditing);
+                await updateDoc(doc(db, "homepage_sliders", isEditing), finalData);
             }
-
-            // Fallback if columns are missing (Postgres error 42703 is "undefined_column")
-            if (result?.error && result.error.code === "42703") {
-                console.warn("Columns button2_label/link missing, falling back...");
-                const { button2_label, button2_link, ...fallbackData } = finalData;
-                if (isAdding) {
-                    result = await supabase.from("homepage_sliders").insert([fallbackData]);
-                } else if (isEditing) {
-                    result = await supabase.from("homepage_sliders").update(fallbackData).eq("id", isEditing);
-                }
-            }
-
-            if (result?.error) throw result.error;
 
             // Close panels and force table refresh with new key
             setIsEditing(null);
@@ -141,8 +123,7 @@ export default function HeroSliderManager() {
 
     const handleDelete = async (id: string) => {
         try {
-            const { error } = await supabase.from("homepage_sliders").delete().eq("id", id);
-            if (error) throw error;
+            await deleteDoc(doc(db, "homepage_sliders", id));
             setSlides(slides.filter(s => s.id !== id));
             setConfirmDelete(null);
             setTableKey(prev => prev + 1);
@@ -155,8 +136,9 @@ export default function HeroSliderManager() {
     const toggleActive = async (slide: HeroSlide) => {
         const newStatus = !slide.active;
         setSlides(slides.map(s => s.id === slide.id ? { ...s, active: newStatus } : s));
-        const { error } = await supabase.from("homepage_sliders").update({ active: newStatus }).eq("id", slide.id);
-        if (error) {
+        try {
+            await updateDoc(doc(db, "homepage_sliders", slide.id), { active: newStatus });
+        } catch (error) {
             console.error("Error toggling status:", error);
             setSlides(slides.map(s => s.id === slide.id ? { ...s, active: !newStatus } : s));
         }
